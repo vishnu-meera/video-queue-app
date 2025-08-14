@@ -12,6 +12,7 @@ A React Native + Expo video player application that fetches YouTube URLs from a 
 - ✅ Responsive design that adapts to different screen sizes
 - ✅ Minimal YouTube overlays (no related videos, share buttons, etc.)
 - ✅ Navigation controls (Previous, Next, Restart) visible on all platforms
+- ✅ **GitHub Pages deployment ready!**
 
 ## How It Works
 
