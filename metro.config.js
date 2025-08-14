@@ -11,4 +11,14 @@ config.resolver.alias = {
   'react-native-web-webview': 'react-native-webview',
 };
 
+// Configure for GitHub Pages deployment
+if (process.env.NODE_ENV === 'production') {
+  config.transformer.minifierConfig = {
+    keep_fnames: true,
+    mangle: {
+      keep_fnames: true,
+    },
+  };
+}
+
 module.exports = config;
