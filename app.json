@@ -22,7 +22,7 @@
       "bundler": "metro",
       "output": "static",
       "favicon": "./assets/images/favicon.png",
-      "baseUrl": "/video-queue-app/",
+      "baseUrl": "",
       "build": {
         "babel": {
           "include": ["react-native-youtube-iframe"]

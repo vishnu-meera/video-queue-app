@@ -11,7 +11,7 @@ config.resolver.alias = {
   'react-native-web-webview': 'react-native-webview',
 };
 
-// Configure for GitHub Pages deployment
+// Configure for GitHub Pages deployment with base path
 if (process.env.NODE_ENV === 'production') {
   config.transformer.minifierConfig = {
     keep_fnames: true,
@@ -20,5 +20,8 @@ if (process.env.NODE_ENV === 'production') {
     },
   };
 }
+
+// Handle base path for GitHub Pages
+// config.resolver.baseUrl = '/video-queue-app/';
 
 module.exports = config;
