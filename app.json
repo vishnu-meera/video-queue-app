@@ -23,6 +23,9 @@
       "output": "static",
       "favicon": "./assets/images/favicon.png",
       "baseUrl": "",
+      "router": {
+        "mode": "hash"
+      },
       "build": {
         "babel": {
           "include": ["react-native-youtube-iframe"]
