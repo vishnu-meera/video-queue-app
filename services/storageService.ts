@@ -1,22 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Platform } from 'react-native';
 
-// Use localForage for web, AsyncStorage for mobile
-let storage: any;
-
-if (Platform.OS === 'web') {
-  // Dynamic import for web to avoid bundling issues
-  import('localforage').then((localForage) => {
-    storage = localForage.default || localForage;
-    storage.config({
-      name: 'video-queue-app',
-      storeName: 'video_queue_store'
-    });
-  });
-} else {
-  storage = AsyncStorage;
-}
-
 const QUEUE_STORAGE_KEY = 'video_queue';
 const LAST_FETCH_KEY = 'last_gist_fetch';
 
@@ -26,26 +10,50 @@ interface VideoItem {
   title?: string;
 }
 
-// Helper function to ensure storage is ready
-const ensureStorage = async () => {
-  if (Platform.OS === 'web' && !storage) {
-    const localForage = await import('localforage');
-    storage = localForage.default || localForage;
-    storage.config({
-      name: 'video-queue-app',
-      storeName: 'video_queue_store'
-    });
+// Simple localStorage fallback for web
+const getWebStorage = () => {
+  if (typeof window !== 'undefined' && window.localStorage) {
+    return {
+      setItem: (key: string, value: any) => {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(value));
+          return Promise.resolve();
+        } catch (error) {
+          return Promise.reject(error);
+        }
+      },
+      getItem: (key: string) => {
+        try {
+          const item = window.localStorage.getItem(key);
+          return Promise.resolve(item ? JSON.parse(item) : null);
+        } catch (error) {
+          return Promise.resolve(null);
+        }
+      },
+      removeItem: (key: string) => {
+        try {
+          window.localStorage.removeItem(key);
+          return Promise.resolve();
+        } catch (error) {
+          return Promise.reject(error);
+        }
+      }
+    };
   }
-  return storage;
+  return null;
 };
 
 export const saveQueueToStorage = async (queue: VideoItem[]): Promise<void> => {
   try {
-    const storageInstance = await ensureStorage();
     if (Platform.OS === 'web') {
-      await storageInstance.setItem(QUEUE_STORAGE_KEY, queue);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        await webStorage.setItem(QUEUE_STORAGE_KEY, queue);
+      } else {
+        throw new Error('Web storage not available');
+      }
     } else {
-      await storageInstance.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
+      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(queue));
     }
     console.log('Queue saved to storage:', queue.length, 'videos');
   } catch (error) {
@@ -56,13 +64,17 @@ export const saveQueueToStorage = async (queue: VideoItem[]): Promise<void> => {
 
 export const loadQueueFromStorage = async (): Promise<VideoItem[]> => {
   try {
-    const storageInstance = await ensureStorage();
     let data;
     
     if (Platform.OS === 'web') {
-      data = await storageInstance.getItem(QUEUE_STORAGE_KEY);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        data = await webStorage.getItem(QUEUE_STORAGE_KEY);
+      } else {
+        return [];
+      }
     } else {
-      data = await storageInstance.getItem(QUEUE_STORAGE_KEY);
+      data = await AsyncStorage.getItem(QUEUE_STORAGE_KEY);
       if (data) {
         data = JSON.parse(data);
       }
@@ -81,14 +93,18 @@ export const loadQueueFromStorage = async (): Promise<VideoItem[]> => {
 
 export const removeVideoFromStorage = async (videoId: string): Promise<void> => {
   try {
-    const storageInstance = await ensureStorage();
     const currentQueue = await loadQueueFromStorage();
     const updatedQueue = currentQueue.filter(video => video.id !== videoId);
     
     if (Platform.OS === 'web') {
-      await storageInstance.setItem(QUEUE_STORAGE_KEY, updatedQueue);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        await webStorage.setItem(QUEUE_STORAGE_KEY, updatedQueue);
+      } else {
+        throw new Error('Web storage not available');
+      }
     } else {
-      await storageInstance.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueue));
+      await AsyncStorage.setItem(QUEUE_STORAGE_KEY, JSON.stringify(updatedQueue));
     }
     
     console.log('Video removed from storage:', videoId);
@@ -100,11 +116,15 @@ export const removeVideoFromStorage = async (videoId: string): Promise<void> => 
 
 export const clearQueueFromStorage = async (): Promise<void> => {
   try {
-    const storageInstance = await ensureStorage();
     if (Platform.OS === 'web') {
-      await storageInstance.removeItem(QUEUE_STORAGE_KEY);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        await webStorage.removeItem(QUEUE_STORAGE_KEY);
+      } else {
+        throw new Error('Web storage not available');
+      }
     } else {
-      await storageInstance.removeItem(QUEUE_STORAGE_KEY);
+      await AsyncStorage.removeItem(QUEUE_STORAGE_KEY);
     }
     console.log('Queue cleared from storage');
   } catch (error) {
@@ -115,12 +135,16 @@ export const clearQueueFromStorage = async (): Promise<void> => {
 
 export const saveLastFetchTime = async (): Promise<void> => {
   try {
-    const storageInstance = await ensureStorage();
     const timestamp = Date.now();
     if (Platform.OS === 'web') {
-      await storageInstance.setItem(LAST_FETCH_KEY, timestamp);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        await webStorage.setItem(LAST_FETCH_KEY, timestamp);
+      } else {
+        throw new Error('Web storage not available');
+      }
     } else {
-      await storageInstance.setItem(LAST_FETCH_KEY, timestamp.toString());
+      await AsyncStorage.setItem(LAST_FETCH_KEY, timestamp.toString());
     }
     console.log('Last fetch time saved:', timestamp);
   } catch (error) {
@@ -131,13 +155,17 @@ export const saveLastFetchTime = async (): Promise<void> => {
 
 export const getLastFetchTime = async (): Promise<number> => {
   try {
-    const storageInstance = await ensureStorage();
     let data;
     
     if (Platform.OS === 'web') {
-      data = await storageInstance.getItem(LAST_FETCH_KEY);
+      const webStorage = getWebStorage();
+      if (webStorage) {
+        data = await webStorage.getItem(LAST_FETCH_KEY);
+      } else {
+        return 0;
+      }
     } else {
-      data = await storageInstance.getItem(LAST_FETCH_KEY);
+      data = await AsyncStorage.getItem(LAST_FETCH_KEY);
       if (data) {
         data = parseInt(data, 10);
       }
