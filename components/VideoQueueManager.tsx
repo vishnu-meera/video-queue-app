@@ -3,10 +3,10 @@ import { Platform, StyleSheet, Text, TouchableOpacity, View } from 'react-native
 import { useResponsive } from '../hooks/useResponsive';
 import { extractVideoId, fetchVideoQueue } from '../services/gistService';
 import {
-    loadQueueFromStorage,
-    removeVideoFromStorage,
-    saveLastFetchTime,
-    saveQueueToStorage
+  loadQueueFromStorage,
+  removeVideoFromStorage,
+  saveLastFetchTime,
+  saveQueueToStorage
 } from '../services/storageService';
 import { VideoPlayer } from './VideoPlayer';
 
@@ -28,13 +28,17 @@ export const VideoQueueManager: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
+      console.log('Starting to load video queue...');
+      
       // First try to load from local storage
       let videos = await loadQueueFromStorage();
+      console.log(`Loaded ${videos.length} videos from local storage`);
       
       // If no videos in storage, fetch from Gist
       if (videos.length === 0) {
         console.log('No videos in local storage, fetching from Gist...');
         const urls = await fetchVideoQueue();
+        console.log(`Fetched ${urls.length} URLs from Gist:`, urls);
         
         videos = urls
           .map(url => {
@@ -43,27 +47,42 @@ export const VideoQueueManager: React.FC = () => {
           })
           .filter((video): video is VideoItem => video !== null);
 
+        console.log(`Processed ${videos.length} valid videos`);
+
         // Save to local storage
         await saveQueueToStorage(videos);
         await saveLastFetchTime();
         console.log(`Fetched and saved ${videos.length} videos from Gist`);
       } else {
-        console.log(`Loaded ${videos.length} videos from local storage`);
+        console.log(`Using ${videos.length} videos from local storage`);
       }
 
       setVideoQueue(videos);
       setCurrentVideoIndex(0);
+      console.log('Video queue loaded successfully');
     } catch (err) {
-      setError('Failed to load video queue');
       console.error('Error loading video queue:', err);
+      setError(`Failed to load video queue: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setIsLoading(false);
+      console.log('Loading state set to false');
     }
   }, []);
 
   useEffect(() => {
+    // Add a timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      if (isLoading) {
+        console.log('Loading timeout reached, forcing error state');
+        setError('Loading timeout - please check your internet connection');
+        setIsLoading(false);
+      }
+    }, 10000); // 10 second timeout
+
     loadVideoQueue();
-  }, [loadVideoQueue]);
+
+    return () => clearTimeout(timeoutId);
+  }, [loadVideoQueue, isLoading]);
 
   // Debug log when current video changes
   useEffect(() => {
@@ -137,6 +156,9 @@ export const VideoQueueManager: React.FC = () => {
     return (
       <View style={styles.container}>
         <Text style={styles.errorText}>{error}</Text>
+        <Text style={[styles.errorText, { fontSize: 14, marginTop: 10, color: '#ccc' }]}>
+          This might be due to network issues or CORS restrictions.
+        </Text>
         <TouchableOpacity style={styles.retryButton} onPress={loadVideoQueue}>
           <Text style={styles.retryButtonText}>Retry</Text>
         </TouchableOpacity>
