@@ -6,11 +6,19 @@ const GIST_URL = 'https://gist.githubusercontent.com/vishnu-meera/be8676f942b4d5
 
 export const fetchVideoQueue = async (): Promise<string[]> => {
   try {
+    console.log('Fetching video queue from:', GIST_URL);
     const response = await fetch(GIST_URL);
+    console.log('Response status:', response.status);
+    console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+    
     if (!response.ok) {
       throw new Error(`HTTP error! status: ${response.status}`);
     }
+    
     const data: GistData = await response.json();
+    console.log('Fetched data:', data);
+    console.log('Queue length:', data.queue?.length || 0);
+    
     return data.queue || [];
   } catch (error) {
     console.error('Error fetching video queue:', error);
